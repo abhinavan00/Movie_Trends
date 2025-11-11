@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react'
+import { useDebounce } from 'react-use';
 import Search from './components/Search'
 import Spinner from './components/Spinner';
 import MovieCard from './components/MovieCard';
@@ -20,13 +21,26 @@ const App = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [movieList, setMovieList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
-  const fetchMovies = async () => {
+  // Debounce the search term input to limit API calls
+  // By waiting for the user to stop typing for 500ms
+  useDebounce(
+    () => {
+      setDebouncedSearchTerm(seaerchTerm);
+    },
+    500,
+    [seaerchTerm]
+  );
+
+  const fetchMovies = async (query = '') => {
     setIsLoading(true);
     setErrorMessage('');
 
     try {
-      const endPoint = `${API_BASE_URL}/movies/trending?extended=images`;
+      const endPoint = query? 
+        `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}&extended=images`:
+        `${API_BASE_URL}/movies/trending?extended=images`;
       const response = await fetch(endPoint, API_OPTIONS);
 
       if (!response.ok) {
@@ -53,8 +67,8 @@ const App = () => {
   }
 
   useEffect(() => {
-    fetchMovies();
-  }, []);
+    fetchMovies(debouncedSearchTerm);
+  }, [debouncedSearchTerm]);
 
   return (
     <main>
