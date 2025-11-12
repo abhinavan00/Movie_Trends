@@ -3,6 +3,7 @@ import { useDebounce } from 'react-use';
 import Search from './components/Search'
 import Spinner from './components/Spinner';
 import MovieCard from './components/MovieCard';
+import { updateSearchCount } from './appwrite';
 
 const API_BASE_URL = 'https://api.trakt.tv'
 const CLIENT_ID = import.meta.env.VITE_TRAKT_CLIENT_ID;
@@ -17,7 +18,7 @@ const API_OPTIONS = {
 };
 
 const App = () => {
-  const [seaerchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [movieList, setMovieList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,10 +28,10 @@ const App = () => {
   // By waiting for the user to stop typing for 500ms
   useDebounce(
     () => {
-      setDebouncedSearchTerm(seaerchTerm);
+      setDebouncedSearchTerm(searchTerm);
     },
-    500,
-    [seaerchTerm]
+    1000,
+    [searchTerm]
   );
 
   const fetchMovies = async (query = '') => {
@@ -49,7 +50,7 @@ const App = () => {
 
       const data = await response.json();
 
-      console.log('Fetched movies:', data);
+      console.log('Fetched movies:', data[0].movie);
 
       if (data.Response === 'False') {
         setErrorMessage(data.Error || 'No movies found.');
@@ -58,6 +59,11 @@ const App = () => {
       }
 
       setMovieList(data || []);
+
+      if (query && data.length > 0) {
+        await updateSearchCount(query, data[0].movie);
+      }
+      
     } catch (error) {
       console.error('Error fetching movies:', error);
       setErrorMessage('Failed to fetch movies. Please try again later.');
@@ -79,14 +85,16 @@ const App = () => {
           <img src="./hero-img.png" alt="Hero Banner" />
           <h1>Find <span className='text-gradient'>Movies</span> You'll Enjoy Without the Hassle</h1>
 
-          <Search seaerchTerm={seaerchTerm} setSearchTerm={setSearchTerm} />
+          <Search seaerchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </header>
 
         <section className='all-movies'>
           <h2 className="mt-[40px]">All Movies</h2>
 
           {isLoading ? (
-            <Spinner />
+            <div className='flex justify-center mt-10'>
+              <Spinner />
+            </div>
           ) : errorMessage ? (
             <p className='text-red-500'>{errorMessage}</p>
           ) : (
